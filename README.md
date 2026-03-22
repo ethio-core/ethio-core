@@ -30,6 +30,7 @@
 - **Offline Payments**: Sequence-protected QR vouchers — financial inclusion
 # ETHIO-CORE - COMPLETE SYSTEM ARCHITECTURE DIAGRAMS
 ## DIAGRAM 1: HIGH-LEVEL SYSTEM ARCHITECTURE
+```mermaid
 graph TB
     subgraph EXTERNAL["EXTERNAL ACTORS"]
         USER[👤 End User]
@@ -110,7 +111,9 @@ graph TB
     M5 --> PG
     M6 --> PG
     M7 --> ES3
+```
 # DIAGRAM 2: EVENT SOURCING ARCHITECTURE
+```mermaid
 graph LR
     subgraph WRITE["WRITE PATH (Commands)"]
         direction TB
@@ -147,7 +150,9 @@ graph LR
 
     CMD --> ES
     ES --> DAEMON
+```
 # DIAGRAM 3: CRYPTOGRAPHIC HASH CHAIN
+```mermaid
 graph LR
     subgraph CHAIN["EVENT STREAM HASH CHAIN"]
         direction LR
@@ -173,7 +178,9 @@ graph LR
 
     RESULT -->|Yes| PASS[✅ No Tampering]
     RESULT -->|No| FAIL[❌ Tamper Detected]
+```
 # DIAGRAM 4: TRANSACTION FLOW WITH OPTIMISTIC CONCURRENCY
+```mermaid
 sequenceDiagram
     autonumber
     participant U as User
@@ -218,7 +225,9 @@ sequenceDiagram
         T->>T: Detect duplicate
         T-->>F: Already processed
     end
+```
 # DIAGRAM 5: OFFLINE PAYMENT FLOW
+```mermaid
 sequenceDiagram
     autonumber
     participant U as User (Offline)
@@ -255,7 +264,9 @@ sequenceDiagram
             S-->>M: Transaction Complete
         end
     end
+```
 # DIAGRAM 6: MODULE INTERACTION MAP
+```mermaid
 graph TB
     subgraph MODULES["7 CORE MODULES"]
         M1[Module 1<br/>Identity & KYC<br/>Fayda + OCR]
@@ -305,7 +316,9 @@ graph TB
     M4 --> VISA
 
     M5 -.->|Verifies| ES
+```
 # DIAGRAM 7: DEPLOYMENT ARCHITECTURE (KUBERNETES)
+```mermaid
 graph TB
     subgraph K8S["KUBERNETES CLUSTER"]
         subgraph INGRESS["Ingress Layer"]
@@ -349,7 +362,9 @@ graph TB
     SERVICES --> PROM
     PROM --> GRAF
     STATE --> STORAGE
+```
 # DIAGRAM 8: TEMPORAL QUERY (TIME-TRAVEL AUDIT)
+```mermaid
 graph LR
     subgraph TIMELINE["EVENT TIMELINE"]
         direction LR
@@ -385,6 +400,7 @@ graph LR
     Q4 --> O1
     R2 --> O2
 # DIAGRAM 9: SECURITY ARCHITECTURE LAYERS
+```mermaid
 graph TB
     subgraph L1["LAYER 1: PERIMETER SECURITY"]
         WAF[Web Application Firewall]
@@ -418,7 +434,9 @@ graph TB
     end
 
     L1 --> L2 --> L3 --> L4 --> L5
+```
 # DIAGRAM 10: COMPLETE USER JOURNEY
+```mermaid
 flowchart TD
     START([Start]) --> STEP1
 
@@ -473,7 +491,7 @@ flowchart TD
     style STEP3 fill:#fff3e0
     style STEP4 fill:#fce4ec
     style STEP5 fill:#f3e5f5
-
+```
 ## 📁 Repository Structure
 
 ```bash
