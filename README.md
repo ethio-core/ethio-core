@@ -164,10 +164,16 @@ graph LR
     end
 
     subgraph VERIFY["INTEGRITY VERIFICATION"]
-        V1[Verify H1] --> V2[Verify H2 = SHA256(H1 + Event2)]
-        V2 --> V3[Verify H3 = SHA256(H2 + Event3)]
-        V3 --> V4[Verify H4 = SHA256(H3 + Event4)]
-        V4 --> RESULT{Chain Valid?}
+        V1["Verify H1"]
+        V2["Verify H2 = SHA256(H1 + Event2)"]
+        V3["Verify H3 = SHA256(H2 + Event3)"]
+        V4["Verify H4 = SHA256(H3 + Event4)"]
+        RESULT{Chain Valid?}
+        
+        V1 --> V2
+        V2 --> V3
+        V3 --> V4
+        V4 --> RESULT
     end
 
     E1 --> V1
@@ -176,8 +182,8 @@ graph LR
     E4 --> V4
     E5 --> V4
 
-    RESULT -->|Yes| PASS[✅ No Tampering]
-    RESULT -->|No| FAIL[❌ Tamper Detected]
+    RESULT -->|Yes| PASS["✅ No Tampering"]
+    RESULT -->|No| FAIL["❌ Tamper Detected"]
 ```
 # DIAGRAM 4: TRANSACTION FLOW WITH OPTIMISTIC CONCURRENCY
 ```mermaid
@@ -399,6 +405,7 @@ graph LR
 
     Q4 --> O1
     R2 --> O2
+```
 # DIAGRAM 9: SECURITY ARCHITECTURE LAYERS
 ```mermaid
 graph TB
