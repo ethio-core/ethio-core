@@ -1,0 +1,11 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Verify Repository
+        run: echo " Ethio-Core - Ready for Kifiya Inspire 3.0 Hackathon!"
