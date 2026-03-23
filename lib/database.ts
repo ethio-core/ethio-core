@@ -1,5 +1,3 @@
-// In-memory database for MVP (simulates persistent storage)
-
 import type { User, VirtualCard, Transaction, OfflineTransaction, AuthSession } from './types';
 import { generateBiometricEmbedding } from './biometrics';
 import {
@@ -11,16 +9,14 @@ import {
   tokenizeCardNumber,
 } from './crypto';
 
-// Database collections
 class Database {
   private users: Map<string, User> = new Map();
   private cards: Map<string, VirtualCard> = new Map();
   private transactions: Map<string, Transaction> = new Map();
   private offlineQueue: Map<string, OfflineTransaction> = new Map();
   private sessions: Map<string, AuthSession> = new Map();
-  private phoneIndex: Map<string, string> = new Map(); // phone -> userId
+  private phoneIndex: Map<string, string> = new Map();
 
-  // User operations
   createUser(user: User): User {
     this.users.set(user.id, user);
     this.phoneIndex.set(user.phone, user.id);
@@ -50,7 +46,6 @@ class Database {
     return Array.from(this.users.values());
   }
 
-  // Card operations
   createCard(card: VirtualCard): VirtualCard {
     this.cards.set(card.id, card);
     return card;
@@ -74,7 +69,6 @@ class Database {
     return undefined;
   }
 
-  // Transaction operations
   createTransaction(transaction: Transaction): Transaction {
     this.transactions.set(transaction.id, transaction);
     return transaction;
@@ -104,7 +98,6 @@ class Database {
     return Array.from(this.transactions.values());
   }
 
-  // Offline queue operations
   queueOfflineTransaction(offlineTx: OfflineTransaction): OfflineTransaction {
     this.offlineQueue.set(offlineTx.id, offlineTx);
     return offlineTx;
@@ -134,7 +127,6 @@ class Database {
     return this.offlineQueue.delete(id);
   }
 
-  // Session operations
   createSession(session: AuthSession): AuthSession {
     this.sessions.set(session.token, session);
     return session;
@@ -153,7 +145,6 @@ class Database {
     return this.sessions.delete(token);
   }
 
-  // Utility: Reset database (for testing)
   reset(): void {
     this.users.clear();
     this.cards.clear();
@@ -163,7 +154,6 @@ class Database {
     this.phoneIndex.clear();
   }
 
-  // Utility: Get database stats
   getStats(): {
     users: number;
     cards: number;
@@ -181,10 +171,8 @@ class Database {
   }
 }
 
-// Singleton instance
 export const db = new Database();
 
-// Seed some demo data
 export type DemoSeedAccount = {
   phone: string;
   pin: string;
@@ -196,19 +184,14 @@ const DEMO_ACCOUNTS: DemoSeedAccount[] = [
   { phone: '+250700000002', pin: '5678', fullName: 'Brian Okello' },
 ];
 
-// Create a deterministic set of demo users/cards for the /demo UI.
-// Idempotent: if the DB already has users, it won't create duplicates.
 export function seedDemoData(): DemoSeedAccount[] {
   const stats = db.getStats();
   if (stats.users > 0) {
-    // DB already initialized; return the known demo credentials for UI.
     return DEMO_ACCOUNTS;
   }
 
-  // Keep demo credentials stable so the UI can show them without needing user IDs.
-  const createdAtOld = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(); // > 24h old
+  const createdAtOld = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString();
 
-  // Demo users
   const user1: User = {
     id: generateId('usr'),
     fullName: DEMO_ACCOUNTS[0].fullName,
@@ -238,7 +221,6 @@ export function seedDemoData(): DemoSeedAccount[] {
   db.createUser(user1);
   db.createUser(user2);
 
-  // Demo cards (one per user)
   const { tokenized: tokenized1, lastFour: lastFour1 } = tokenizeCardNumber();
   const card1: VirtualCard = {
     id: generateId('card'),
@@ -271,7 +253,6 @@ export function seedDemoData(): DemoSeedAccount[] {
   };
   db.createCard(card2);
 
-  // Seed a couple of completed transactions (old enough to avoid velocity rules).
   const txOld1At = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString();
   const txOld2At = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000 - 60 * 60 * 1000).toISOString();
 
@@ -300,21 +281,19 @@ export function seedDemoData(): DemoSeedAccount[] {
     currency: 'USD',
     status: 'completed',
     type: 'payment',
-    fraudScore: 45, // show a fraud alert indicator in the UI
+    fraudScore: 45,
     createdAt: txOld2At,
     syncedAt: txOld2At,
     description: 'Demo payment (seed)',
   };
   db.createTransaction(tx2);
 
-  // Apply balance/card updates to match the seeded completed transactions.
   db.updateUser(user1.id, { walletBalance: user1.walletBalance - tx1.amount + tx2.amount });
   db.updateUser(user2.id, { walletBalance: user2.walletBalance + tx1.amount - tx2.amount });
   db.updateCard(card1.id, { spentToday: tx1.amount });
   db.updateCard(card2.id, { spentToday: tx2.amount });
 
-  // Seed one offline queued transaction to demonstrate /api/sync.
-  const queuedAt = new Date(Date.now() - 30 * 60 * 1000).toISOString(); // 30 min ago
+  const queuedAt = new Date(Date.now() - 30 * 60 * 1000).toISOString();
   const offlineTx: OfflineTransaction = {
     id: generateId('offline'),
     queuedAt,

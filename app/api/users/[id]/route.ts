@@ -1,5 +1,3 @@
-// GET /api/users/[id] - Get User Details
-
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/database';
 
@@ -18,13 +16,10 @@ export async function GET(
       }, { status: 404 });
     }
 
-    // Get user's cards
     const cards = db.getCardsByUserId(id);
     
-    // Get user's transactions
     const transactions = db.getTransactionsByUserId(id);
     
-    // Get offline queue
     const offlineQueue = db.getOfflineQueueByUserId(id);
 
     return NextResponse.json({

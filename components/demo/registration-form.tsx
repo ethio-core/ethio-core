@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { BiometricCameraCapture } from "@/components/demo/biometric-camera-capture";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Camera, Check, Loader2, User, Phone, CreditCard, Lock } from "lucide-react";
+import { ArrowLeft, Check, Loader2, User, Phone, CreditCard, Lock } from "lucide-react";
 import type { DemoUser } from "@/app/demo/page";
 
 interface RegistrationFormProps {
@@ -14,9 +15,10 @@ interface RegistrationFormProps {
 
 export function RegistrationForm({ onComplete, onBack }: RegistrationFormProps) {
   const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
+  const [submitLoading, setSubmitLoading] = useState(false);
   const [error, setError] = useState("");
   const [biometricCaptured, setBiometricCaptured] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     fullName: "",
@@ -60,13 +62,7 @@ export function RegistrationForm({ onComplete, onBack }: RegistrationFormProps) 
     return true;
   };
 
-  const simulateBiometricCapture = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setBiometricCaptured(true);
-      setLoading(false);
-    }, 2000);
-  };
+  const demoBiometricToken = (phone: string) => `demo_face:${phone.trim()}`;
 
   const handleSubmit = async () => {
     if (!biometricCaptured) {
@@ -74,12 +70,13 @@ export function RegistrationForm({ onComplete, onBack }: RegistrationFormProps) 
       return;
     }
 
-    setLoading(true);
+    setSubmitLoading(true);
     setError("");
 
     try {
-      // Generate a simulated biometric data string
-      const biometricData = `face_${formData.phone}_${Date.now()}`;
+      // For MVP demo, use a stable token so biometric auth can succeed reliably.
+      // (The captured photo is kept client-side for UX, but server-side matching is simulated.)
+      const biometricData = demoBiometricToken(formData.phone);
       
       const response = await fetch("/api/register", {
         method: "POST",
@@ -98,7 +95,6 @@ export function RegistrationForm({ onComplete, onBack }: RegistrationFormProps) 
 
       if (!response.ok) {
         setError(data.message || "Registration failed");
-        setLoading(false);
         return;
       }
 
@@ -106,11 +102,17 @@ export function RegistrationForm({ onComplete, onBack }: RegistrationFormProps) 
       const userResponse = await fetch(`/api/users/${data.userId}`);
       const userData = await userResponse.json();
 
+      if (!userResponse.ok || !userData?.user) {
+        setError(userData?.message || "Registration succeeded but failed to load user profile.");
+        return;
+      }
+
       onComplete(userData.user);
-    } catch {
-      setError("Network error. Please try again.");
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Unexpected error";
+      setError(`Registration failed: ${message}`);
     } finally {
-      setLoading(false);
+      setSubmitLoading(false);
     }
   };
 
@@ -133,7 +135,6 @@ export function RegistrationForm({ onComplete, onBack }: RegistrationFormProps) 
         </CardHeader>
 
         <CardContent>
-          {/* Progress Bar */}
           <div className="mb-6 flex gap-2">
             {[1, 2, 3].map((s) => (
               <div
@@ -151,7 +152,6 @@ export function RegistrationForm({ onComplete, onBack }: RegistrationFormProps) 
             </div>
           )}
 
-          {/* Step 1: Personal Information */}
           {step === 1 && (
             <div className="space-y-4">
               <div>
@@ -224,7 +224,6 @@ export function RegistrationForm({ onComplete, onBack }: RegistrationFormProps) 
             </div>
           )}
 
-          {/* Step 2: Security Setup */}
           {step === 2 && (
             <div className="space-y-4">
               <div>
@@ -283,54 +282,30 @@ export function RegistrationForm({ onComplete, onBack }: RegistrationFormProps) 
             </div>
           )}
 
-          {/* Step 3: Biometric Capture */}
           {step === 3 && (
             <div className="space-y-4">
-              <div className="flex flex-col items-center rounded-lg border-2 border-dashed border-border bg-muted/30 p-8">
-                {!biometricCaptured ? (
-                  <>
-                    <div className="mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-muted">
-                      {loading ? (
-                        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                      ) : (
-                        <Camera className="h-10 w-10 text-muted-foreground" />
-                      )}
-                    </div>
-                    <h3 className="mb-2 font-semibold text-foreground">
-                      {loading ? "Capturing..." : "Face Recognition"}
-                    </h3>
-                    <p className="mb-4 text-center text-sm text-muted-foreground">
-                      {loading 
-                        ? "Please hold still while we capture your biometric data"
-                        : "Click below to simulate biometric capture (face or fingerprint)"
-                      }
-                    </p>
-                    <Button onClick={simulateBiometricCapture} disabled={loading}>
-                      {loading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Capturing...
-                        </>
-                      ) : (
-                        <>
-                          <Camera className="mr-2 h-4 w-4" />
-                          Capture Biometric
-                        </>
-                      )}
-                    </Button>
-                  </>
-                ) : (
-                  <>
-                    <div className="mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-primary/10">
-                      <Check className="h-10 w-10 text-primary" />
-                    </div>
-                    <h3 className="mb-2 font-semibold text-foreground">Biometric Captured</h3>
-                    <p className="text-center text-sm text-muted-foreground">
-                      Your biometric data has been securely captured and converted to an embedding vector.
-                    </p>
-                  </>
-                )}
-              </div>
+              {!biometricCaptured ? (
+                <BiometricCameraCapture
+                  onCaptured={(dataUrl) => {
+                    setCapturedPhoto(dataUrl);
+                    setBiometricCaptured(true);
+                    setError("");
+                  }}
+                  disabled={submitLoading}
+                  title="Face Recognition"
+                  subtitle="Allow camera access and take a photo to enroll biometrics"
+                />
+              ) : (
+                <div className="flex flex-col items-center rounded-lg border-2 border-dashed border-border bg-muted/30 p-8">
+                  <div className="mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-primary/10">
+                    <Check className="h-10 w-10 text-primary" />
+                  </div>
+                  <h3 className="mb-2 font-semibold text-foreground">Biometric Captured</h3>
+                  <p className="text-center text-sm text-muted-foreground">
+                    {capturedPhoto ? "Photo captured and linked to your demo identity." : "Biometric captured."}
+                  </p>
+                </div>
+              )}
 
               <div className="rounded-lg bg-muted/50 p-3">
                 <h4 className="mb-1 text-sm font-medium text-foreground">Security Note</h4>
@@ -346,9 +321,9 @@ export function RegistrationForm({ onComplete, onBack }: RegistrationFormProps) 
                 <Button
                   className="flex-1"
                   onClick={handleSubmit}
-                  disabled={loading || !biometricCaptured}
+                  disabled={submitLoading || !biometricCaptured}
                 >
-                  {loading ? (
+                  {submitLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Registering...

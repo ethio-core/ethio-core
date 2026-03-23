@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BiometricCameraCapture } from "@/components/demo/biometric-camera-capture";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,14 +29,9 @@ export function LoginForm({
   const [pin, setPin] = useState(initialPin ?? "");
   const [useBiometric, setUseBiometric] = useState(false);
   const [biometricVerified, setBiometricVerified] = useState(false);
+  const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
 
-  const simulateBiometricAuth = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setBiometricVerified(true);
-      setLoading(false);
-    }, 1500);
-  };
+  const demoBiometricToken = (phoneValue: string) => `demo_face:${phoneValue.trim()}`;
 
   const handleLogin = async () => {
     if (!phone) {
@@ -52,7 +48,7 @@ export function LoginForm({
     setError("");
 
     try {
-      const biometricData = biometricVerified ? `face_${phone}_${Date.now()}` : undefined;
+      const biometricData = biometricVerified ? demoBiometricToken(phone) : undefined;
       
       const response = await fetch("/api/login", {
         method: "POST",
@@ -126,7 +122,6 @@ export function LoginForm({
             </div>
           </div>
 
-          {/* Authentication Method Selection */}
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => setUseBiometric(false)}
@@ -155,7 +150,6 @@ export function LoginForm({
             </button>
           </div>
 
-          {/* PIN Input */}
           {!useBiometric && (
             <div>
               <label className="mb-1.5 block text-sm font-medium text-foreground">
@@ -175,42 +169,35 @@ export function LoginForm({
             </div>
           )}
 
-          {/* Biometric Verification */}
           {useBiometric && (
-            <div className="flex flex-col items-center rounded-lg border border-dashed border-border bg-muted/30 p-6">
-              {!biometricVerified ? (
-                <>
-                  <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                    {loading ? (
-                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    ) : (
-                      <Fingerprint className="h-8 w-8 text-muted-foreground" />
-                    )}
-                  </div>
-                  <p className="mb-3 text-sm text-muted-foreground">
-                    {loading ? "Verifying biometric..." : "Click to authenticate with biometric"}
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={simulateBiometricAuth}
-                    disabled={loading}
-                  >
-                    {loading ? "Verifying..." : "Capture Biometric"}
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                    <Check className="h-8 w-8 text-primary" />
-                  </div>
-                  <p className="text-sm font-medium text-primary">Biometric Verified</p>
-                </>
-              )}
-            </div>
+            biometricVerified ? (
+              <div className="flex flex-col items-center rounded-lg border border-dashed border-border bg-muted/30 p-6">
+                <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                  <Check className="h-8 w-8 text-primary" />
+                </div>
+                <p className="text-sm font-medium text-primary">Biometric Verified</p>
+                {capturedPhoto ? (
+                  <p className="mt-1 text-xs text-muted-foreground">Photo captured locally for demo.</p>
+                ) : null}
+              </div>
+            ) : (
+              <BiometricCameraCapture
+                onCaptured={(dataUrl) => {
+                  setCapturedPhoto(dataUrl);
+                  setBiometricVerified(true);
+                  setError("");
+                }}
+                disabled={loading}
+                title="Biometric Login"
+                subtitle={
+                  phone
+                    ? "Allow camera access and take a photo to authenticate"
+                    : "Enter your phone number first, then capture biometric"
+                }
+              />
+            )
           )}
 
-          {/* MFA Option */}
           {biometricVerified && (
             <div className="rounded-lg bg-primary/10 p-3">
               <p className="text-sm text-foreground">

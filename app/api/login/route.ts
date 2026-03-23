@@ -1,5 +1,3 @@
-// POST /api/login - User Authentication (Biometric + PIN)
-
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/database';
 import { verifyPin, generateAuthToken } from '@/lib/crypto';
@@ -11,7 +9,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<LoginResp
     const body: LoginRequest = await request.json();
     const { phone, pin, biometricData } = body;
 
-    // Validate required fields
     if (!phone) {
       return NextResponse.json({
         success: false,
@@ -19,7 +16,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<LoginResp
       }, { status: 400 });
     }
 
-    // At least one auth method required
     if (!pin && !biometricData) {
       return NextResponse.json({
         success: false,
@@ -27,7 +23,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<LoginResp
       }, { status: 400 });
     }
 
-    // Find user
     const user = db.getUserByPhone(phone);
     if (!user) {
       return NextResponse.json({
@@ -40,7 +35,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<LoginResp
     let biometricVerified = false;
     let biometricScore = 0;
 
-    // Verify PIN if provided
     if (pin) {
       pinVerified = verifyPin(pin, user.pin);
       if (!pinVerified) {
@@ -51,9 +45,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<LoginResp
       }
     }
 
-    // Verify biometric if provided
     if (biometricData) {
-      // Perform liveness check first
       const livenessResult = performLivenessCheck(biometricData);
       if (!livenessResult.isLive) {
         return NextResponse.json({
@@ -62,7 +54,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<LoginResp
         }, { status: 401 });
       }
 
-      // Generate embedding from input and compare
       const inputEmbedding = generateBiometricEmbedding(biometricData);
       const verificationResult = verifyBiometric(user.biometricEmbedding, inputEmbedding);
       
@@ -77,13 +68,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<LoginResp
       }
     }
 
-    // Determine MFA status (both methods verified)
     const mfaVerified = pinVerified && biometricVerified;
 
-    // Create session
     const token = generateAuthToken();
     const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 24); // 24 hour session
+    expiresAt.setHours(expiresAt.getHours() + 24);
 
     const session: AuthSession = {
       userId: user.id,
@@ -94,7 +83,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<LoginResp
 
     db.createSession(session);
 
-    // Get user's cards
     const cards = db.getCardsByUserId(user.id);
 
     return NextResponse.json({
@@ -132,7 +120,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<LoginResp
   }
 }
 
-// GET /api/login - Get login requirements
 export async function GET(): Promise<NextResponse> {
   return NextResponse.json({
     requirements: {

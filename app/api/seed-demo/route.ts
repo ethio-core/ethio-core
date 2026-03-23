@@ -15,7 +15,6 @@ export async function POST() {
 }
 
 export async function GET() {
-  // Allow GET for quick manual testing.
   const accounts = seedDemoData();
   return NextResponse.json(
     {

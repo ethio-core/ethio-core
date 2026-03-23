@@ -1,5 +1,3 @@
-// POST /api/verify-biometric - Verify Biometric Data
-
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/database';
 import { generateBiometricEmbedding, verifyBiometric, performLivenessCheck } from '@/lib/biometrics';
@@ -10,7 +8,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<VerifyBio
     const body: VerifyBiometricRequest = await request.json();
     const { userId, biometricData } = body;
 
-    // Validate required fields
     if (!userId || !biometricData) {
       return NextResponse.json({
         success: false,
@@ -20,7 +17,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<VerifyBio
       }, { status: 400 });
     }
 
-    // Find user
     const user = db.getUserById(userId);
     if (!user) {
       return NextResponse.json({
@@ -31,7 +27,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<VerifyBio
       }, { status: 404 });
     }
 
-    // Perform liveness check
     const livenessResult = performLivenessCheck(biometricData);
     if (!livenessResult.isLive) {
       return NextResponse.json({
@@ -46,10 +41,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<VerifyBio
       }, { status: 400 });
     }
 
-    // Generate embedding from input
     const inputEmbedding = generateBiometricEmbedding(biometricData);
 
-    // Verify against stored embedding
     const result = verifyBiometric(user.biometricEmbedding, inputEmbedding);
 
     return NextResponse.json({
@@ -77,7 +70,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<VerifyBio
   }
 }
 
-// GET /api/verify-biometric - Get verification requirements
 export async function GET(): Promise<NextResponse> {
   return NextResponse.json({
     requirements: {

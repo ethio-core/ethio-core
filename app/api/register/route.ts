@@ -1,5 +1,3 @@
-// POST /api/register - User Registration with eKYC
-
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/database';
 import { generateId, hashPin } from '@/lib/crypto';
@@ -11,7 +9,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<RegisterR
     const body: RegisterRequest = await request.json();
     const { fullName, phone, nationalId, email, pin, biometricData } = body;
 
-    // Validate required fields
     if (!fullName || !phone || !nationalId || !pin || !biometricData) {
       return NextResponse.json({
         success: false,
@@ -19,7 +16,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<RegisterR
       }, { status: 400 });
     }
 
-    // Validate PIN format (4-6 digits)
     if (!/^\d{4,6}$/.test(pin)) {
       return NextResponse.json({
         success: false,
@@ -27,7 +23,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<RegisterR
       }, { status: 400 });
     }
 
-    // Check if user already exists
     const existingUser = db.getUserByPhone(phone);
     if (existingUser) {
       return NextResponse.json({
@@ -36,7 +31,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<RegisterR
       }, { status: 409 });
     }
 
-    // Perform liveness check on biometric data
     const livenessResult = performLivenessCheck(biometricData);
     if (!livenessResult.isLive) {
       return NextResponse.json({
@@ -45,10 +39,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<RegisterR
       }, { status: 400 });
     }
 
-    // Generate biometric embedding (simulates ML model processing)
     const biometricEmbedding = generateBiometricEmbedding(biometricData);
 
-    // Create user
     const user: User = {
       id: generateId('usr'),
       fullName,
@@ -58,8 +50,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<RegisterR
       biometricEmbedding,
       pin: hashPin(pin),
       createdAt: new Date().toISOString(),
-      kycStatus: 'verified', // Auto-verify for MVP
-      walletBalance: 1000 // Starting balance for demo
+      kycStatus: 'verified',
+      walletBalance: 1000
     };
 
     db.createUser(user);
@@ -79,7 +71,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<RegisterR
   }
 }
 
-// GET /api/register - Get registration requirements
 export async function GET(): Promise<NextResponse> {
   return NextResponse.json({
     requirements: {
