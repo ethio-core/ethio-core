@@ -1,0 +1,213 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: ethio-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ethio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ethio_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-ethio_core}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./event-store/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ethio}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ethio-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: ethio-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ethio-network
+
+  # M1 - Identity Service
+  identity-service:
+    build:
+      context: ./modules/m1-identity
+      dockerfile: Dockerfile
+    container_name: ethio-identity
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-ethio}:${POSTGRES_PASSWORD:-ethio_secret}@postgres:5432/${POSTGRES_DB:-ethio_core}
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret_change_in_production}
+      - SERVICE_NAME=identity-service
+    ports:
+      - "8001:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ethio-network
+
+  # M2 - Biometric Service
+  biometric-service:
+    build:
+      context: ./modules/m2-biometric
+      dockerfile: Dockerfile
+    container_name: ethio-biometric
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-ethio}:${POSTGRES_PASSWORD:-ethio_secret}@postgres:5432/${POSTGRES_DB:-ethio_core}
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret_change_in_production}
+      - SERVICE_NAME=biometric-service
+    ports:
+      - "8002:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ethio-network
+
+  # M3 - Card Service
+  card-service:
+    build:
+      context: ./modules/m3-card
+      dockerfile: Dockerfile
+    container_name: ethio-card
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-ethio}:${POSTGRES_PASSWORD:-ethio_secret}@postgres:5432/${POSTGRES_DB:-ethio_core}
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret_change_in_production}
+      - SERVICE_NAME=card-service
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY:-dev_encryption_key_32bytes!}
+    ports:
+      - "8003:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ethio-network
+
+  # M4 - Transaction Service
+  transaction-service:
+    build:
+      context: ./modules/m4-transaction
+      dockerfile: Dockerfile
+    container_name: ethio-transaction
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-ethio}:${POSTGRES_PASSWORD:-ethio_secret}@postgres:5432/${POSTGRES_DB:-ethio_core}
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret_change_in_production}
+      - SERVICE_NAME=transaction-service
+    ports:
+      - "8004:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ethio-network
+
+  # M5 - Security Service
+  security-service:
+    build:
+      context: ./modules/m5-security
+      dockerfile: Dockerfile
+    container_name: ethio-security
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-ethio}:${POSTGRES_PASSWORD:-ethio_secret}@postgres:5432/${POSTGRES_DB:-ethio_core}
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret_change_in_production}
+      - SERVICE_NAME=security-service
+    ports:
+      - "8005:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ethio-network
+
+  # M6 - SSO Service
+  sso-service:
+    build:
+      context: ./modules/m6-sso
+      dockerfile: Dockerfile
+    container_name: ethio-sso
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-ethio}:${POSTGRES_PASSWORD:-ethio_secret}@postgres:5432/${POSTGRES_DB:-ethio_core}
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret_change_in_production}
+      - SERVICE_NAME=sso-service
+      - OAUTH2_CLIENT_ID=${OAUTH2_CLIENT_ID:-ethio_client}
+      - OAUTH2_CLIENT_SECRET=${OAUTH2_CLIENT_SECRET:-ethio_secret}
+    ports:
+      - "8006:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ethio-network
+
+  # MVP unified API (matches m7-frontend api.ts — port 8000)
+  mvp-api:
+    build:
+      context: ./mvp-api
+      dockerfile: Dockerfile
+    container_name: ethio-mvp-api
+    environment:
+      - JWT_SECRET=${JWT_SECRET:-dev_jwt_secret_change_in_production}
+      - DATABASE_URL=sqlite:////app/data/mvp.db
+    ports:
+      - "8000:8000"
+    volumes:
+      - mvp_api_data:/app/data
+      - mvp_api_uploads:/app/uploads
+    networks:
+      - ethio-network
+
+  # M7 - Frontend
+  frontend:
+    build:
+      context: ./modules/m7-frontend
+      dockerfile: Dockerfile
+      args:
+        API_BASE_URL: http://mvp-api:8000
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - API_BASE_URL=http://mvp-api:8000
+      - NEXT_PUBLIC_SSO_URL=http://localhost:8006
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mvp-api
+    networks:
+      - ethio-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  mvp_api_data:
+  mvp_api_uploads:
+
+networks:
+  ethio-network:
+    driver: bridge

@@ -1,0 +1,53 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Frontend Dev Server",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"dev"
+			],
+			"isBackground": true
+		},
+		{
+			"label": "Run Frontend Dev Server (npm)",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"dev"
+			],
+			"isBackground": true
+		},
+		{
+			"label": "Run Frontend Dev Server (fg)",
+			"type": "shell",
+			"command": "pnpm",
+			"args": [
+				"dev"
+			],
+			"isBackground": false
+		},
+		{
+			"label": "Install deps and run dev",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"pnpm install && pnpm dev"
+			],
+			"isBackground": true
+		},
+		{
+			"label": "Terminal Smoke Test",
+			"type": "shell",
+			"command": "cmd",
+			"args": [
+				"/c",
+				"echo TASK_OK"
+			],
+			"isBackground": false
+		}
+	]
+}
