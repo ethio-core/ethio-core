@@ -1,0 +1,88 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: card-service
+  namespace: ethio-core
+  labels:
+    app: card-service
+    version: v1
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: card-service
+  template:
+    metadata:
+      labels:
+        app: card-service
+        version: v1
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8003"
+    spec:
+      serviceAccountName: ethio-core-sa
+      containers:
+        - name: card-service
+          image: ethio-core/card-service:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8003
+              name: http
+          envFrom:
+            - configMapRef:
+                name: ethio-core-config
+            - secretRef:
+                name: ethio-core-secrets
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8003
+            initialDelaySeconds: 10
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: card-service
+  namespace: ethio-core
+spec:
+  selector:
+    app: card-service
+  ports:
+    - port: 8003
+      targetPort: 8003
+      name: http
+  type: ClusterIP
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: card-service-hpa
+  namespace: ethio-core
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: card-service
+  minReplicas: 3
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

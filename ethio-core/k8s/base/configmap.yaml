@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ethio-core-config
+  namespace: ethio-core
+data:
+  # Database
+  POSTGRES_HOST: "postgres-service"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "ethio_core"
+  
+  # Redis
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
+  
+  # Kafka
+  KAFKA_BOOTSTRAP_SERVERS: "kafka-service:9092"
+  
+  # Service URLs
+  IDENTITY_SERVICE_URL: "http://identity-service:8001"
+  BIOMETRIC_SERVICE_URL: "http://biometric-service:8002"
+  CARD_SERVICE_URL: "http://card-service:8003"
+  TRANSACTION_SERVICE_URL: "http://transaction-service:8004"
+  SECURITY_SERVICE_URL: "http://security-service:8005"
+  SSO_SERVICE_URL: "http://sso-service:8006"
+  EVENT_STORE_URL: "http://event-store-service:8010"
+  
+  # Application Settings
+  LOG_LEVEL: "INFO"
+  ENVIRONMENT: "production"
+  
+  # JWT Settings
+  JWT_ALGORITHM: "RS256"
+  ACCESS_TOKEN_EXPIRE_MINUTES: "30"
+  REFRESH_TOKEN_EXPIRE_DAYS: "7"
